@@ -9,8 +9,6 @@ import { warn } from '../util/warn'
 const toTypes: Array<Function> = [String, Object]
 const eventTypes: Array<Function> = [String, Array]
 
-const noop = () => {}
-
 let warnedCustomSlot
 let warnedTagProp
 let warnedEventProp
@@ -81,11 +79,19 @@ export default {
 
     const handler = e => {
       if (guardEvent(e)) {
-        if (this.replace) {
-          router.replace(location, noop)
-        } else {
-          router.push(location, noop)
-        }
+        (this.replace ? router.replace(location) : router.push(location))
+          .then(route => {
+            this.$emit('onTransitionComplete', {
+              route,
+              replace: this.replace
+            })
+          })
+          .catch(error => {
+            this.$emit('onTransitionError', {
+              error,
+              replace: this.replace
+            })
+          })
       }
     }
 
