@@ -1,6 +1,6 @@
 /*!
   * vue-router v3.6.5
-  * (c) 2022 Evan You
+  * (c) 2025 Evan You
   * @license MIT
   */
 'use strict'
@@ -192,7 +192,7 @@ function useLink (props) {
   var router = useRouter()
   var currentRoute = useRoute()
 
-  var resolvedRoute = vue.computed(function () { return router.resolve(vue.unref(props.to), currentRoute) })
+  var resolvedRoute = vue.computed(function () { return router.resolve(vue.unref(props.to), currentRoute, undefined, props.replace ? 'replace' : 'push') })
 
   var activeRecordIndex = vue.computed(function () {
     var route = resolvedRoute.value.route

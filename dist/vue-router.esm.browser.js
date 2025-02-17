@@ -1,6 +1,6 @@
 /*!
   * vue-router v3.6.5
-  * (c) 2022 Evan You
+  * (c) 2025 Evan You
   * @license MIT
   */
 /*  */
@@ -144,7 +144,8 @@ function createRoute (
   record,
   location,
   redirectedFrom,
-  router
+  router,
+  transition
 ) {
   const stringifyQuery = router && router.options.stringifyQuery;
 
@@ -161,7 +162,8 @@ function createRoute (
     query,
     params: location.params || {},
     fullPath: getFullPath(location, stringifyQuery),
-    matched: record ? formatMatch(record) : []
+    matched: record ? formatMatch(record) : [],
+    transition: transition || 'unknown'
   };
   if (redirectedFrom) {
     route.redirectedFrom = getFullPath(redirectedFrom, stringifyQuery);
@@ -584,8 +586,9 @@ function parse (str, options) {
     var partial = prefix != null && next != null && next !== prefix;
     var repeat = modifier === '+' || modifier === '*';
     var optional = modifier === '?' || modifier === '*';
-    var delimiter = res[2] || defaultDelimiter;
+    var delimiter = prefix || defaultDelimiter;
     var pattern = capture || group;
+    var prevText = prefix || (typeof tokens[tokens.length - 1] === 'string' ? tokens[tokens.length - 1] : '');
 
     tokens.push({
       name: name || key++,
@@ -595,7 +598,7 @@ function parse (str, options) {
       repeat: repeat,
       partial: partial,
       asterisk: !!asterisk,
-      pattern: pattern ? escapeGroup(pattern) : (asterisk ? '.*' : '[^' + escapeString(delimiter) + ']+?')
+      pattern: pattern ? escapeGroup(pattern) : (asterisk ? '.*' : restrictBacktrack(delimiter, prevText))
     });
   }
 
@@ -610,6 +613,14 @@ function parse (str, options) {
   }
 
   return tokens
+}
+
+function restrictBacktrack(delimiter, prevText) {
+  if (!prevText || prevText.indexOf(delimiter) > -1) {
+    return '[^' + escapeString(delimiter) + ']+?'
+  }
+
+  return escapeString(prevText) + '|(?:(?!' + escapeString(prevText) + ')[^' + escapeString(delimiter) + '])+?'
 }
 
 /**
@@ -1043,8 +1054,6 @@ function normalizeLocation (
 const toTypes = [String, Object];
 const eventTypes = [String, Array];
 
-const noop = () => {};
-
 let warnedCustomSlot;
 let warnedTagProp;
 let warnedEventProp;
@@ -1082,7 +1091,8 @@ var Link = {
     const { location, route, href } = router.resolve(
       this.to,
       current,
-      this.append
+      this.append,
+      this.replace ? 'replace' : 'push'
     );
 
     const classes = {};
@@ -1115,11 +1125,19 @@ var Link = {
 
     const handler = e => {
       if (guardEvent(e)) {
-        if (this.replace) {
-          router.replace(location, noop);
-        } else {
-          router.push(location, noop);
-        }
+        (this.replace ? router.replace(location) : router.push(location))
+          .then(route => {
+            this.$emit('onTransitionComplete', {
+              route,
+              replace: this.replace
+            });
+          })
+          .catch(error => {
+            this.$emit('onTransitionError', {
+              error,
+              replace: this.replace
+            });
+          });
       }
     };
 
@@ -1563,7 +1581,8 @@ function createMatcher (
   function match (
     raw,
     currentRoute,
-    redirectedFrom
+    redirectedFrom,
+    transition
   ) {
     const location = normalizeLocation(raw, currentRoute, false, router);
     const { name } = location;
@@ -1573,7 +1592,7 @@ function createMatcher (
       {
         warn(record, `Route with name '${name}' does not exist`);
       }
-      if (!record) return _createRoute(null, location)
+      if (!record) return _createRoute(null, location, undefined, transition)
       const paramNames = record.regex.keys
         .filter(key => !key.optional)
         .map(key => key.name);
@@ -1591,28 +1610,29 @@ function createMatcher (
       }
 
       location.path = fillParams(record.path, location.params, `named route "${name}"`);
-      return _createRoute(record, location, redirectedFrom)
+      return _createRoute(record, location, redirectedFrom, transition)
     } else if (location.path) {
       location.params = {};
       for (let i = 0; i < pathList.length; i++) {
         const path = pathList[i];
         const record = pathMap[path];
         if (matchRoute(record.regex, location.path, location.params)) {
-          return _createRoute(record, location, redirectedFrom)
+          return _createRoute(record, location, redirectedFrom, transition)
         }
       }
     }
     // no match
-    return _createRoute(null, location)
+    return _createRoute(null, location, undefined, transition)
   }
 
   function redirect (
     record,
-    location
+    location,
+    transition,
   ) {
     const originalRedirect = record.redirect;
     let redirect = typeof originalRedirect === 'function'
-      ? originalRedirect(createRoute(record, location, null, router))
+      ? originalRedirect(createRoute(record, location, null, router, transition))
       : originalRedirect;
 
     if (typeof redirect === 'string') {
@@ -1625,7 +1645,7 @@ function createMatcher (
           false, `invalid redirect option: ${JSON.stringify(redirect)}`
         );
       }
-      return _createRoute(null, location)
+      return _createRoute(null, location, undefined, transition)
     }
 
     const re = redirect;
@@ -1664,14 +1684,15 @@ function createMatcher (
       {
         warn(false, `invalid redirect option: ${JSON.stringify(redirect)}`);
       }
-      return _createRoute(null, location)
+      return _createRoute(null, location, undefined, transition)
     }
   }
 
   function alias (
     record,
     location,
-    matchAs
+    matchAs,
+    transition,
   ) {
     const aliasedPath = fillParams(matchAs, location.params, `aliased route with path "${matchAs}"`);
     const aliasedMatch = match({
@@ -1682,23 +1703,24 @@ function createMatcher (
       const matched = aliasedMatch.matched;
       const aliasedRecord = matched[matched.length - 1];
       location.params = aliasedMatch.params;
-      return _createRoute(aliasedRecord, location)
+      return _createRoute(aliasedRecord, location, undefined, transition)
     }
-    return _createRoute(null, location)
+    return _createRoute(null, location, undefined, transition)
   }
 
   function _createRoute (
     record,
     location,
-    redirectedFrom
+    redirectedFrom,
+    transition,
   ) {
     if (record && record.redirect) {
-      return redirect(record, redirectedFrom || location)
+      return redirect(record, redirectedFrom || location, transition)
     }
     if (record && record.matchAs) {
-      return alias(record, location, record.matchAs)
+      return alias(record, location, record.matchAs, transition)
     }
-    return createRoute(record, location, redirectedFrom, router)
+    return createRoute(record, location, redirectedFrom, router, transition)
   }
 
   return {
@@ -2241,13 +2263,14 @@ class History {
 
   transitionTo (
     location,
+    transition,
     onComplete,
     onAbort
   ) {
     let route;
     // catch redirect option https://github.com/vuejs/vue-router/issues/3201
     try {
-      route = this.router.match(location, this.current);
+      route = this.router.match(location, this.current, undefined, transition);
     } catch (e) {
       this.errorCbs.forEach(cb => {
         cb(e);
@@ -2310,7 +2333,6 @@ class History {
           {
             warn(false, 'uncaught error during route navigation:');
           }
-          console.error(err);
         }
       }
       onAbort && onAbort(err);
@@ -2573,7 +2595,7 @@ class HTML5History extends History {
         return
       }
 
-      this.transitionTo(location, route => {
+      this.transitionTo(location, 'pop', route => {
         if (supportsScroll) {
           handleScroll(router, route, current, true);
         }
@@ -2591,7 +2613,7 @@ class HTML5History extends History {
 
   push (location, onComplete, onAbort) {
     const { current: fromRoute } = this;
-    this.transitionTo(location, route => {
+    this.transitionTo(location, 'push', route => {
       pushState(cleanPath(this.base + route.fullPath));
       handleScroll(this.router, route, fromRoute, false);
       onComplete && onComplete(route);
@@ -2600,7 +2622,7 @@ class HTML5History extends History {
 
   replace (location, onComplete, onAbort) {
     const { current: fromRoute } = this;
-    this.transitionTo(location, route => {
+    this.transitionTo(location, 'replace', route => {
       replaceState(cleanPath(this.base + route.fullPath));
       handleScroll(this.router, route, fromRoute, false);
       onComplete && onComplete(route);
@@ -2665,7 +2687,7 @@ class HashHistory extends History {
       if (!ensureSlash()) {
         return
       }
-      this.transitionTo(getHash(), route => {
+      this.transitionTo(getHash(), 'pop', route => {
         if (supportsScroll) {
           handleScroll(this.router, route, current, true);
         }
@@ -2688,6 +2710,7 @@ class HashHistory extends History {
     const { current: fromRoute } = this;
     this.transitionTo(
       location,
+      'push',
       route => {
         pushHash(route.fullPath);
         handleScroll(this.router, route, fromRoute, false);
@@ -2701,6 +2724,7 @@ class HashHistory extends History {
     const { current: fromRoute } = this;
     this.transitionTo(
       location,
+      'replace',
       route => {
         replaceHash(route.fullPath);
         handleScroll(this.router, route, fromRoute, false);
@@ -2794,6 +2818,7 @@ class AbstractHistory extends History {
   push (location, onComplete, onAbort) {
     this.transitionTo(
       location,
+      'push',
       route => {
         this.stack = this.stack.slice(0, this.index + 1).concat(route);
         this.index++;
@@ -2806,6 +2831,7 @@ class AbstractHistory extends History {
   replace (location, onComplete, onAbort) {
     this.transitionTo(
       location,
+      'replace',
       route => {
         this.stack = this.stack.slice(0, this.index).concat(route);
         onComplete && onComplete(route);
@@ -2912,8 +2938,8 @@ class VueRouter {
     }
   }
 
-  match (raw, current, redirectedFrom) {
-    return this.matcher.match(raw, current, redirectedFrom)
+  match (raw, current, redirectedFrom, transition) {
+    return this.matcher.match(raw, current, redirectedFrom, transition)
   }
 
   get currentRoute () {
@@ -2968,6 +2994,7 @@ class VueRouter {
       };
       history.transitionTo(
         history.getCurrentLocation(),
+        'replace',
         setupListeners,
         setupListeners
       );
@@ -3056,11 +3083,12 @@ class VueRouter {
   resolve (
     to,
     current,
-    append
+    append,
+    transition
   ) {
     current = current || this.history.current;
     const location = normalizeLocation(to, current, append, this);
-    const route = this.match(location, current);
+    const route = this.match(location, current, undefined, transition);
     const fullPath = route.redirectedFrom || route.fullPath;
     const base = this.history.base;
     const href = createHref(base, fullPath, this.mode);
@@ -3081,7 +3109,7 @@ class VueRouter {
   addRoute (parentOrRoute, route) {
     this.matcher.addRoute(parentOrRoute, route);
     if (this.history.current !== START) {
-      this.history.transitionTo(this.history.getCurrentLocation());
+      this.history.transitionTo(this.history.getCurrentLocation(), 'replace');
     }
   }
 
@@ -3091,7 +3119,7 @@ class VueRouter {
     }
     this.matcher.addRoutes(routes);
     if (this.history.current !== START) {
-      this.history.transitionTo(this.history.getCurrentLocation());
+      this.history.transitionTo(this.history.getCurrentLocation(), 'replace');
     }
   }
 }
