@@ -39,7 +39,7 @@ export class HTML5History extends History {
         return
       }
 
-      this.transitionTo(location, route => {
+      this.transitionTo(location, 'pop', route => {
         if (supportsScroll) {
           handleScroll(router, route, current, true)
         }
@@ -57,7 +57,7 @@ export class HTML5History extends History {
 
   push (location: RawLocation, onComplete?: Function, onAbort?: Function) {
     const { current: fromRoute } = this
-    this.transitionTo(location, route => {
+    this.transitionTo(location, 'push', route => {
       pushState(cleanPath(this.base + route.fullPath))
       handleScroll(this.router, route, fromRoute, false)
       onComplete && onComplete(route)
@@ -66,7 +66,7 @@ export class HTML5History extends History {
 
   replace (location: RawLocation, onComplete?: Function, onAbort?: Function) {
     const { current: fromRoute } = this
-    this.transitionTo(location, route => {
+    this.transitionTo(location, 'replace', route => {
       replaceState(cleanPath(this.base + route.fullPath))
       handleScroll(this.router, route, fromRoute, false)
       onComplete && onComplete(route)

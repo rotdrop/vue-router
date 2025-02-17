@@ -57,7 +57,7 @@ export function useLink (props) {
   const router = useRouter()
   const currentRoute = useRoute()
 
-  const resolvedRoute = computed(() => router.resolve(unref(props.to), currentRoute))
+  const resolvedRoute = computed(() => router.resolve(unref(props.to), currentRoute, undefined, props.replace ? 'replace' : 'push'))
 
   const activeRecordIndex = computed(() => {
     const route = resolvedRoute.value.route

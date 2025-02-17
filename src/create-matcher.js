@@ -51,7 +51,8 @@ export function createMatcher (
   function match (
     raw: RawLocation,
     currentRoute?: Route,
-    redirectedFrom?: Location
+    redirectedFrom?: Location,
+    transition?: TransitionType
   ): Route {
     const location = normalizeLocation(raw, currentRoute, false, router)
     const { name } = location
@@ -61,7 +62,7 @@ export function createMatcher (
       if (process.env.NODE_ENV !== 'production') {
         warn(record, `Route with name '${name}' does not exist`)
       }
-      if (!record) return _createRoute(null, location)
+      if (!record) return _createRoute(null, location, undefined, transition)
       const paramNames = record.regex.keys
         .filter(key => !key.optional)
         .map(key => key.name)
@@ -79,28 +80,29 @@ export function createMatcher (
       }
 
       location.path = fillParams(record.path, location.params, `named route "${name}"`)
-      return _createRoute(record, location, redirectedFrom)
+      return _createRoute(record, location, redirectedFrom, transition)
     } else if (location.path) {
       location.params = {}
       for (let i = 0; i < pathList.length; i++) {
         const path = pathList[i]
         const record = pathMap[path]
         if (matchRoute(record.regex, location.path, location.params)) {
-          return _createRoute(record, location, redirectedFrom)
+          return _createRoute(record, location, redirectedFrom, transition)
         }
       }
     }
     // no match
-    return _createRoute(null, location)
+    return _createRoute(null, location, undefined, transition)
   }
 
   function redirect (
     record: RouteRecord,
-    location: Location
+    location: Location,
+    transition?: TransitionType,
   ): Route {
     const originalRedirect = record.redirect
     let redirect = typeof originalRedirect === 'function'
-      ? originalRedirect(createRoute(record, location, null, router))
+      ? originalRedirect(createRoute(record, location, null, router, transition))
       : originalRedirect
 
     if (typeof redirect === 'string') {
@@ -113,7 +115,7 @@ export function createMatcher (
           false, `invalid redirect option: ${JSON.stringify(redirect)}`
         )
       }
-      return _createRoute(null, location)
+      return _createRoute(null, location, undefined, transition)
     }
 
     const re: Object = redirect
@@ -152,14 +154,15 @@ export function createMatcher (
       if (process.env.NODE_ENV !== 'production') {
         warn(false, `invalid redirect option: ${JSON.stringify(redirect)}`)
       }
-      return _createRoute(null, location)
+      return _createRoute(null, location, undefined, transition)
     }
   }
 
   function alias (
     record: RouteRecord,
     location: Location,
-    matchAs: string
+    matchAs: string,
+    transition?: TransitionType,
   ): Route {
     const aliasedPath = fillParams(matchAs, location.params, `aliased route with path "${matchAs}"`)
     const aliasedMatch = match({
@@ -170,23 +173,24 @@ export function createMatcher (
       const matched = aliasedMatch.matched
       const aliasedRecord = matched[matched.length - 1]
       location.params = aliasedMatch.params
-      return _createRoute(aliasedRecord, location)
+      return _createRoute(aliasedRecord, location, undefined, transition)
     }
-    return _createRoute(null, location)
+    return _createRoute(null, location, undefined, transition)
   }
 
   function _createRoute (
     record: ?RouteRecord,
     location: Location,
-    redirectedFrom?: Location
+    redirectedFrom?: Location,
+    transition?: TransitionType,
   ): Route {
     if (record && record.redirect) {
-      return redirect(record, redirectedFrom || location)
+      return redirect(record, redirectedFrom || location, transition)
     }
     if (record && record.matchAs) {
-      return alias(record, location, record.matchAs)
+      return alias(record, location, record.matchAs, transition)
     }
-    return createRoute(record, location, redirectedFrom, router)
+    return createRoute(record, location, redirectedFrom, router, transition)
   }
 
   return {

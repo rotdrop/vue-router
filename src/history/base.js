@@ -81,13 +81,14 @@ export class History {
 
   transitionTo (
     location: RawLocation,
+    transition?: TransitionType,
     onComplete?: Function,
     onAbort?: Function
   ) {
     let route
     // catch redirect option https://github.com/vuejs/vue-router/issues/3201
     try {
-      route = this.router.match(location, this.current)
+      route = this.router.match(location, this.current, undefined, transition)
     } catch (e) {
       this.errorCbs.forEach(cb => {
         cb(e)
@@ -150,7 +151,6 @@ export class History {
           if (process.env.NODE_ENV !== 'production') {
             warn(false, 'uncaught error during route navigation:')
           }
-          console.error(err)
         }
       }
       onAbort && onAbort(err)

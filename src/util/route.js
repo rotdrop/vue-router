@@ -9,7 +9,8 @@ export function createRoute (
   record: ?RouteRecord,
   location: Location,
   redirectedFrom?: ?Location,
-  router?: VueRouter
+  router?: VueRouter,
+  transition?: TransitionType
 ): Route {
   const stringifyQuery = router && router.options.stringifyQuery
 
@@ -26,7 +27,8 @@ export function createRoute (
     query,
     params: location.params || {},
     fullPath: getFullPath(location, stringifyQuery),
-    matched: record ? formatMatch(record) : []
+    matched: record ? formatMatch(record) : [],
+    transition: transition || 'unknown'
   }
   if (redirectedFrom) {
     route.redirectedFrom = getFullPath(redirectedFrom, stringifyQuery)

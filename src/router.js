@@ -77,8 +77,8 @@ export default class VueRouter {
     }
   }
 
-  match (raw: RawLocation, current?: Route, redirectedFrom?: Location): Route {
-    return this.matcher.match(raw, current, redirectedFrom)
+  match (raw: RawLocation, current?: Route, redirectedFrom?: Location, transition?: TransitionType): Route {
+    return this.matcher.match(raw, current, redirectedFrom, transition)
   }
 
   get currentRoute (): ?Route {
@@ -134,6 +134,7 @@ export default class VueRouter {
       }
       history.transitionTo(
         history.getCurrentLocation(),
+        'replace',
         setupListeners,
         setupListeners
       )
@@ -222,7 +223,8 @@ export default class VueRouter {
   resolve (
     to: RawLocation,
     current?: Route,
-    append?: boolean
+    append?: boolean,
+    transition?: TransitionType
   ): {
     location: Location,
     route: Route,
@@ -233,7 +235,7 @@ export default class VueRouter {
   } {
     current = current || this.history.current
     const location = normalizeLocation(to, current, append, this)
-    const route = this.match(location, current)
+    const route = this.match(location, current, undefined, transition)
     const fullPath = route.redirectedFrom || route.fullPath
     const base = this.history.base
     const href = createHref(base, fullPath, this.mode)
@@ -254,7 +256,7 @@ export default class VueRouter {
   addRoute (parentOrRoute: string | RouteConfig, route?: RouteConfig) {
     this.matcher.addRoute(parentOrRoute, route)
     if (this.history.current !== START) {
-      this.history.transitionTo(this.history.getCurrentLocation())
+      this.history.transitionTo(this.history.getCurrentLocation(), 'replace')
     }
   }
 
@@ -264,7 +266,7 @@ export default class VueRouter {
     }
     this.matcher.addRoutes(routes)
     if (this.history.current !== START) {
-      this.history.transitionTo(this.history.getCurrentLocation())
+      this.history.transitionTo(this.history.getCurrentLocation(), 'replace')
     }
   }
 }

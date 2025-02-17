@@ -37,7 +37,7 @@ export class HashHistory extends History {
       if (!ensureSlash()) {
         return
       }
-      this.transitionTo(getHash(), route => {
+      this.transitionTo(getHash(), 'pop', route => {
         if (supportsScroll) {
           handleScroll(this.router, route, current, true)
         }
@@ -60,6 +60,7 @@ export class HashHistory extends History {
     const { current: fromRoute } = this
     this.transitionTo(
       location,
+      'push',
       route => {
         pushHash(route.fullPath)
         handleScroll(this.router, route, fromRoute, false)
@@ -73,6 +74,7 @@ export class HashHistory extends History {
     const { current: fromRoute } = this
     this.transitionTo(
       location,
+      'replace',
       route => {
         replaceHash(route.fullPath)
         handleScroll(this.router, route, fromRoute, false)

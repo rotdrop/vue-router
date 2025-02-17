@@ -139,7 +139,7 @@ export declare class VueRouter {
    * Go forward in history if possible by calling `history.forward()`. Equivalent to `router.go(1)`.
    */
   forward(): void
-  match (raw: RawLocation, current?: Route, redirectedFrom?: Location): Route
+  match (raw: RawLocation, current?: Route, redirectedFrom?: Location, transition?: TransitionType): Route
   getMatchedComponents(to?: RawLocation | Route): Component[]
   /**
    * This method queues a callback to be called when the router has completed the initial navigation, which means it has
@@ -407,6 +407,8 @@ export interface Location {
   replace?: boolean
 }
 
+export type TransitionType = 'unknown'|'push'|'pop'|'replace'
+
 export interface Route {
   path: string
   name?: string | null
@@ -417,6 +419,7 @@ export interface Route {
   matched: RouteRecord[]
   redirectedFrom?: string
   meta?: RouteMeta
+  transition: TransitionType
 }
 
 export interface RouteMeta extends Record<string | number | symbol, any> {}

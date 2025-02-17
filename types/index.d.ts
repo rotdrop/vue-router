@@ -17,7 +17,8 @@ export type {
   Route,
   NavigationGuard,
   NavigationGuardNext,
-  NavigationFailure
+  NavigationFailure,
+  TransitionType
 } from './router'
 
 import './composables'

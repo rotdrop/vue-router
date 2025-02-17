@@ -46,7 +46,8 @@ export default {
     const { location, route, href } = router.resolve(
       this.to,
       current,
-      this.append
+      this.append,
+      this.replace ? 'replace' : 'push'
     )
 
     const classes = {}
