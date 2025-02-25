@@ -2220,6 +2220,7 @@ class History {
   
   
   
+  
 
   // implemented by sub-classes
   
@@ -2239,6 +2240,7 @@ class History {
     this.readyCbs = [];
     this.readyErrorCbs = [];
     this.errorCbs = [];
+    this.navigationFailureCbs = [];
     this.listeners = [];
   }
 
@@ -2259,6 +2261,10 @@ class History {
 
   onError (errorCb) {
     this.errorCbs.push(errorCb);
+  }
+
+  onNavigationFailure (errorCb) {
+    this.navigationFailureCbs.push(errorCb);
   }
 
   transitionTo (
@@ -2334,6 +2340,10 @@ class History {
             warn(false, 'uncaught error during route navigation:');
           }
         }
+      } else if (isNavigationFailure(err)) {
+        this.navigationFailureCbs.forEach(cb => {
+          cb(err);
+        });
       }
       onAbort && onAbort(err);
     };
@@ -3025,6 +3035,10 @@ class VueRouter {
 
   onError (errorCb) {
     this.history.onError(errorCb);
+  }
+
+  onNavigationFailure (abortCb) {
+    this.history.onNavigationFailure(abortCb);
   }
 
   push (location, onComplete, onAbort) {

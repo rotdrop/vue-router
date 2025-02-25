@@ -2240,6 +2240,7 @@ var History = function History (router, base) {
   this.readyCbs = [];
   this.readyErrorCbs = [];
   this.errorCbs = [];
+  this.navigationFailureCbs = [];
   this.listeners = [];
 };
 
@@ -2260,6 +2261,10 @@ History.prototype.onReady = function onReady (cb, errorCb) {
 
 History.prototype.onError = function onError (errorCb) {
   this.errorCbs.push(errorCb);
+};
+
+History.prototype.onNavigationFailure = function onNavigationFailure (errorCb) {
+  this.navigationFailureCbs.push(errorCb);
 };
 
 History.prototype.transitionTo = function transitionTo (
@@ -2339,6 +2344,10 @@ History.prototype.confirmTransition = function confirmTransition (route, onCompl
           warn(false, 'uncaught error during route navigation:');
         }
       }
+    } else if (isNavigationFailure(err)) {
+      this$1$1.navigationFailureCbs.forEach(function (cb) {
+        cb(err);
+      });
     }
     onAbort && onAbort(err);
   };
@@ -3054,6 +3063,10 @@ VueRouter.prototype.onReady = function onReady (cb, errorCb) {
 
 VueRouter.prototype.onError = function onError (errorCb) {
   this.history.onError(errorCb);
+};
+
+VueRouter.prototype.onNavigationFailure = function onNavigationFailure (abortCb) {
+  this.history.onNavigationFailure(abortCb);
 };
 
 VueRouter.prototype.push = function push (location, onComplete, onAbort) {
