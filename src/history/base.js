@@ -32,6 +32,7 @@ export class History {
   readyCbs: Array<Function>
   readyErrorCbs: Array<Function>
   errorCbs: Array<Function>
+  navigationFailureCbs: Array<Function>
   listeners: Array<Function>
   cleanupListeners: Function
 
@@ -57,6 +58,7 @@ export class History {
     this.readyCbs = []
     this.readyErrorCbs = []
     this.errorCbs = []
+    this.navigationFailureCbs = []
     this.listeners = []
   }
 
@@ -77,6 +79,10 @@ export class History {
 
   onError (errorCb: Function) {
     this.errorCbs.push(errorCb)
+  }
+
+  onNavigationFailure (errorCb: Function) {
+    this.navigationFailureCbs.push(errorCb)
   }
 
   transitionTo (
@@ -152,6 +158,10 @@ export class History {
             warn(false, 'uncaught error during route navigation:')
           }
         }
+      } else if (isNavigationFailure(err)) {
+        this.navigationFailureCbs.forEach(cb => {
+          cb(err)
+        })
       }
       onAbort && onAbort(err)
     }

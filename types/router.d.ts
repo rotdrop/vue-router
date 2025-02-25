@@ -12,6 +12,7 @@ type Component =
 
 type Dictionary<T> = { [key: string]: T }
 type ErrorHandler = (err: Error) => void
+type NavigationFailureHandler = (err: NavigationFailure) => void
 
 export type RouterMode = 'hash' | 'history' | 'abstract'
 export type RawLocation = string | Location
@@ -156,9 +157,20 @@ export declare class VueRouter {
    * thrown synchronously and asynchronously, errors returned or passed to `next` in any navigation guard, and errors
    * occurred when trying to resolve an async component that is required to render a route.
    *
+   * UNFORTUNATELY, THIS GETS NEVER TRIGGERED ON ORDINARY ROUTER ERRORS.
+   *
    * @param handler - error handler to register
    */
   onError(cb: ErrorHandler): void
+  /**
+   * Adds an error handler that is called every time a non caught
+   * error happens during navigation. The handlers is in particular
+   * also called on routing errors (duplicated etc.) in contrast to
+   * onError()-handlers which are NEVER called in this case.
+   *
+   * @param handler - error handler to register
+   */
+  onNavigationFailure(cb: NavigationFailureHandler): void
   /**
    * @deprecated use {@link addRoute | router.addRoute()} instead
    */
