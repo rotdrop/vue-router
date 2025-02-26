@@ -333,6 +333,8 @@ export interface RouterOptions {
     from: Route,
     savedPosition: Position | void
   ) => PositionResult | Promise<PositionResult> | undefined | null
+
+  navigationPromiseFactory?: (...p: ConstructorParameters<typeof Promise<Route>>) => Promise<Route>
 }
 
 type RoutePropsFunction = (route: Route) => Object

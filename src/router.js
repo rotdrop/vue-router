@@ -36,6 +36,7 @@ export default class VueRouter {
   beforeHooks: Array<?NavigationGuard>
   resolveHooks: Array<?NavigationGuard>
   afterHooks: Array<?AfterNavigationHook>
+  navigationPromiseFactory: (...p: ConstructorParameters<typeof Promise<Route>>) => Promise<Route>
 
   constructor (options: RouterOptions = {}) {
     if (process.env.NODE_ENV !== 'production') {
@@ -48,6 +49,7 @@ export default class VueRouter {
     this.resolveHooks = []
     this.afterHooks = []
     this.matcher = createMatcher(options.routes || [], this)
+    this.navigationPromiseFactory = options.navigationPromiseFactory || ((arg) => (new Promise<Route>(arg)))
 
     let mode = options.mode || 'hash'
     this.fallback =
@@ -174,7 +176,7 @@ export default class VueRouter {
   push (location: RawLocation, onComplete?: Function, onAbort?: Function) {
     // $flow-disable-line
     if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
-      return new Promise((resolve, reject) => {
+      return this.navigationPromiseFactory((resolve, reject) => {
         this.history.push(location, resolve, reject)
       })
     } else {
@@ -185,7 +187,7 @@ export default class VueRouter {
   replace (location: RawLocation, onComplete?: Function, onAbort?: Function) {
     // $flow-disable-line
     if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
-      return new Promise((resolve, reject) => {
+      return this.navigationPromiseFactory((resolve, reject) => {
         this.history.replace(location, resolve, reject)
       })
     } else {
