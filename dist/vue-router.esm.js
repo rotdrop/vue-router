@@ -2940,6 +2940,7 @@ var VueRouter = function VueRouter (options) {
   this.resolveHooks = [];
   this.afterHooks = [];
   this.matcher = createMatcher(options.routes || [], this);
+  this.navigationPromiseFactory = options.navigationPromiseFactory || (function (arg) { return (new Promise<Route>(arg)); });
 
   var mode = options.mode || 'hash';
   this.fallback =
@@ -3072,7 +3073,7 @@ VueRouter.prototype.push = function push (location, onComplete, onAbort) {
 
   // $flow-disable-line
   if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
-    return new Promise(function (resolve, reject) {
+    return this.navigationPromiseFactory(function (resolve, reject) {
       this$1$1.history.push(location, resolve, reject);
     })
   } else {
@@ -3085,7 +3086,7 @@ VueRouter.prototype.replace = function replace (location, onComplete, onAbort) {
 
   // $flow-disable-line
   if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
-    return new Promise(function (resolve, reject) {
+    return this.navigationPromiseFactory(function (resolve, reject) {
       this$1$1.history.replace(location, resolve, reject);
     })
   } else {

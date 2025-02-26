@@ -2907,6 +2907,7 @@ class VueRouter {
   
   
   
+  
 
   constructor (options = {}) {
     {
@@ -2919,6 +2920,7 @@ class VueRouter {
     this.resolveHooks = [];
     this.afterHooks = [];
     this.matcher = createMatcher(options.routes || [], this);
+    this.navigationPromiseFactory = options.navigationPromiseFactory || ((arg) => (new Promise<Route>(arg)));
 
     let mode = options.mode || 'hash';
     this.fallback =
@@ -3044,7 +3046,7 @@ class VueRouter {
   push (location, onComplete, onAbort) {
     // $flow-disable-line
     if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
-      return new Promise((resolve, reject) => {
+      return this.navigationPromiseFactory((resolve, reject) => {
         this.history.push(location, resolve, reject);
       })
     } else {
@@ -3055,7 +3057,7 @@ class VueRouter {
   replace (location, onComplete, onAbort) {
     // $flow-disable-line
     if (!onComplete && !onAbort && typeof Promise !== 'undefined') {
-      return new Promise((resolve, reject) => {
+      return this.navigationPromiseFactory((resolve, reject) => {
         this.history.replace(location, resolve, reject);
       })
     } else {
